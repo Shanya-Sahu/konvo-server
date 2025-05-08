@@ -3,11 +3,12 @@ import { Server as IOServer } from "socket.io";
 import { consumer } from "../config/kafka/kafka.js";
 import GroupChatMessage from "../models/groupChat/index.js";
 
+let io;
+
 export default async function startWebSocket(server) {
-  // attach Socket.IO to the same HTTP server
-  const io = new IOServer(server, {
+  io = new IOServer(server, {
     path: "/socket.io",
-    cors: { origin: "*" }, // adjust as needed
+    cors: { origin: "*" },
   });
 
   io.on("connection", (socket) => {
@@ -17,28 +18,22 @@ export default async function startWebSocket(server) {
     );
   });
 
-  // subscribe to Kafka and on each message, both save & emit
+  // subscribe & consume...
   await consumer.subscribe({ topic: "group-messages", fromBeginning: false });
   await consumer.run({
     eachMessage: async ({ message }) => {
       const { sender, content } = JSON.parse(message.value.toString());
-      const savedMsg = await GroupChatMessage.create({
-        senderId: sender,
-        senderName: sender,
-        content,
-      });
-
-      const payload = {
+      const savedMsg = await GroupChatMessage.create({ sender, content }); //save msgs in db
+      io.emit("newMessage", {
         _id: savedMsg._id,
-        senderName: savedMsg.senderName,
+        sender: savedMsg.sender,
         content: savedMsg.content,
         timestamp: savedMsg.timestamp,
-      };
-
-      // broadcast via Socket.IO
-      io.emit("newMessage", payload);
+      });
     },
   });
 
   console.log("✅ Socket.IO + Kafka consumer running");
 }
+
+export { io };

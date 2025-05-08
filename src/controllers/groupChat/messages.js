@@ -1,5 +1,3 @@
-// src/controllers/groupChat/messages.js
-
 import GroupChatMessage from "../../models/groupChat/index.js";
 import { producer } from "../../config/kafka/kafka.js";
 
@@ -25,10 +23,10 @@ export async function postGroupMessage(req, res) {
       topic: "group-messages",
       messages: [{ value: JSON.stringify({ sender, content }) }],
     });
-    res.status(202).json({ message: "Message sent to Kafka" });
+    return res.status(202).json({ message: "Message sent to Kafka" });
   } catch (err) {
     console.error("❌ Kafka publish error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -38,12 +36,23 @@ export async function postGroupMessage(req, res) {
  */
 export async function getGroupMessages(req, res) {
   try {
-    const msgs = await GroupChatMessage.find()
+    // fetch the 100 oldest messages
+    const docs = await GroupChatMessage.find()
       .sort({ timestamp: 1 })
-      .limit(100);
-    res.status(200).json(msgs);
+      .limit(100)
+      .lean(); // get plain JS objects
+
+    // map to exactly what the front end expects
+    const payload = docs.map((m) => ({
+      _id: m._id,
+      sender: m.sender,
+      content: m.content,
+      timestamp: m.timestamp,
+    }));
+
+    return res.status(200).json(payload);
   } catch (err) {
     console.error("❌ History fetch error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
