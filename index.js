@@ -5,7 +5,6 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import helmet from "helmet";
-// import rateLimit from "express-rate-limit";
 
 import { connectDB } from "./src/config/db/connect-db.js";
 import { initKafka, producer, consumer } from "./src/config/kafka/kafka.js";
@@ -32,7 +31,7 @@ async function main() {
     app.use("/api/v1/auth", authRoutes);
     app.use("/api/v1/group", authMiddleware, groupChatRoutes);
 
-    // 4️⃣ Health check
+    // 4️⃣ check api working
     app.get("/", (_req, res) => res.send("🚀 KonvoApp API online!"));
 
     // 5️⃣ Start HTTP server

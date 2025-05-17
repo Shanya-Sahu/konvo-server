@@ -1,10 +1,17 @@
 import { User } from "../../../models/user/index.js";
 import bcrypt from "bcrypt";
 import { generateToken } from "../../../utils/jwt/index.js";
+import { validateLoginInput } from "../../../utils/validate/index.js";
 
 export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
+
+    // Validate input
+    const validationError = validateLoginInput(email, password);
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
 
     // 1) Validate
     if (!email || !password) {
